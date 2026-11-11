@@ -1,0 +1,10 @@
+streamlit
+python-dotenv
+pydantic
+requests
+streamlit
+python-dotenv
+pydantic
+requests
+ollama
+google-genai
