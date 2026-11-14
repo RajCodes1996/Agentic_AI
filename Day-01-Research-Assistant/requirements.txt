@@ -8,3 +8,4 @@ pydantic
 requests
 ollama
 google-genai
+pytest
