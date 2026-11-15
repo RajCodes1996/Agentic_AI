@@ -19,7 +19,7 @@ def generate_response(prompt: str, provider: str) -> str:
 
         model = os.getenv(
             "OLLAMA_MODEL",
-            "llama3.2:3b"
+            "qwen2.5:0.5b"
         )
 
         response = ollama.chat(
@@ -29,7 +29,11 @@ def generate_response(prompt: str, provider: str) -> str:
                     "role": "user",
                     "content": prompt
                 }
-            ]
+            ],
+        options={
+             "num_thread": 1,   # Reserves 1 core so Windows never freezes
+             "num_ctx": 1536    # Keeps RAM usage minimal
+         }
         )
 
         return response.message.content
