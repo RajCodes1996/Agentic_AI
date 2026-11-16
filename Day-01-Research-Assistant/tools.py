@@ -1,8 +1,8 @@
 
 import os
 import requests
-
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 
 
 load_dotenv()
@@ -95,31 +95,61 @@ def search_web(
         
 def collect_research_evidence(
     research_questions: list,
-    results_per_question: int = 3
+    results_per_question: int = 2,
+    max_workers: int = 3
 ) -> list:
 
     """
-    Search every research question and
-    combine the collected evidence.
+    Collect research evidence using concurrent Tavily searches.
+
+    Searches multiple research questions simultaneously,
+    removes duplicate URLs, and limits source content size.
     """
+
+    if not research_questions:
+        return []
+
+    def search_question(question):
+
+        return search_web(
+            query=question,
+            max_results=results_per_question,
+            search_depth="basic"
+        )
 
     all_evidence = []
     seen_urls = set()
 
-    for question in research_questions:
+    worker_count = min(max_workers, len(research_questions))
 
-        search_results = search_web(
-            query=question,
-            max_results=results_per_question
+    with ThreadPoolExecutor(
+        max_workers=worker_count
+    ) as executor:
+
+        # executor.map preserves the original question order.
+        search_batches = executor.map(
+            search_question,
+            research_questions
         )
 
-        for result in search_results:
+        for question, search_results in zip(
+            research_questions,
+            search_batches
+        ):
 
-            url = result["url"]
+            for result in search_results:
 
-            if url and url not in seen_urls:
+                url = result.get("url", "")
+
+                if not url or url in seen_urls:
+                    continue
 
                 seen_urls.add(url)
+
+                # Limit the amount of text sent to the LLM.
+                result["content"] = result.get(
+                    "content", ""
+                )[:1500]
 
                 result["research_question"] = question
 

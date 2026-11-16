@@ -4,6 +4,7 @@ import pytest
 
 import agent
 
+
 def test_successful_research(monkeypatch):
 
     plan = SimpleNamespace(
@@ -31,7 +32,7 @@ def test_successful_research(monkeypatch):
     monkeypatch.setattr(
         agent,
         "collect_research_evidence",
-        lambda questions, results_per_question: evidence
+        lambda questions, results_per_question, max_workers=3: evidence
     )
 
     monkeypatch.setattr(
@@ -65,6 +66,7 @@ def test_successful_research(monkeypatch):
 
     assert result["invalid_citations"] == []
 
+
 def test_research_stops_without_evidence(monkeypatch):
 
     plan = SimpleNamespace(
@@ -80,7 +82,7 @@ def test_research_stops_without_evidence(monkeypatch):
     monkeypatch.setattr(
         agent,
         "collect_research_evidence",
-        lambda questions, results_per_question: []
+        lambda questions, results_per_question, max_workers=3: []
     )
 
     with pytest.raises(RuntimeError):
@@ -88,6 +90,7 @@ def test_research_stops_without_evidence(monkeypatch):
             topic="Generative AI",
             provider="gemini"
         )
+
 
 def test_invalid_citation_detection(monkeypatch):
 
@@ -114,7 +117,7 @@ def test_invalid_citation_detection(monkeypatch):
     monkeypatch.setattr(
         agent,
         "collect_research_evidence",
-        lambda questions, results_per_question: evidence
+        lambda questions, results_per_question, max_workers=3: evidence
     )
 
     monkeypatch.setattr(
@@ -141,6 +144,7 @@ def test_invalid_citation_detection(monkeypatch):
     )
 
     assert result["invalid_citations"] == [5]
+
 
 def test_empty_topic():
 
