@@ -370,13 +370,13 @@ Feedback and suggestions are welcome!
 ## 🖥️ Application Screenshots
 
 ### Research Interface
-![Application UI](https://raw.githubusercontent.com/RajCodes1996/Agentic_AI/main/screenshots/nexus-ui.jpg)
+![Application UI](Day-01-Research-Assistant/screenshots/nexus-ui.jpg)
 
 ### Collected Research Sources
-![Research Sources](https://raw.githubusercontent.com/RajCodes1996/Agentic_AI/main/screenshots/nexus-source.jpg)
+![Research Sources](Day-01-Research-Assistant/screenshots/nexus-source.jpg)
 
 ### Generated Research Report
-![Research Report](https://raw.githubusercontent.com/RajCodes1996/Agentic_AI/main/screenshots/nexus-synthesis-report.jpg)
+![Research Report](Day-01-Research-Assistant//nexus-synthesis-report.jpg)
 
 ### Testing Questions : RAG vs Fine-tuning in LLM applications
 
