@@ -370,13 +370,13 @@ Feedback and suggestions are welcome!
 ## 🖥️ Application Screenshots
 
 ### Research Interface
-![Application UI](screenshots/Nexus_UI.jpg)
+![Application UI](screenshots/nexus-ui.jpg)
 
 ### Collected Research Sources
-![Research Sources](screenshots/Nexus_source.jpg)
+![Research Sources](screenshots/nexus-source.jpg)
 
 ### Generated Research Report
-![Research Report](screenshots/Nexus_synthesis_report.jpg)
+![Research Report](screenshots/nexus-synthesis-report.jpg)
 
 ### Testing Questions : RAG vs Fine-tuning in LLM applications
 
