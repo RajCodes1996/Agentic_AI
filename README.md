@@ -378,4 +378,13 @@ Feedback and suggestions are welcome!
 ### Generated Research Report
 ![Research Report](screenshots/research-report.png)
 
-Testing Questions : RAG vs Fine-tuning in LLM applications
+### Testing Questions : RAG vs Fine-tuning in LLM applications
+
+## Agent 01:
+- A research planning module.
+- Parallel web-search capabilities using Tavily.
+- Hybrid LLM integration with Ollama and Gemini.
+- Evidence collection and citation validation.
+- Automated Markdown report generation.
+- Performance monitoring and automated testing.
+- A redesigned, professional Streamlit interface.
