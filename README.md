@@ -376,10 +376,10 @@ Feedback and suggestions are welcome!
 ![Research Sources](Day-01-Research-Assistant/screenshots/nexus-source.jpg)
 
 ### Generated Research Report
-![Research Report](Day-01-Research-Assistant/nexus-synthesis-report.jpg)
+![Research Report](Day-01-Research-Assistant/screenshots/nexus-synthesis-report.jpg)
 
 ### Performance Report
-![Research Report](Day-01-Research-Assistant/nexus-performance-stats.jpgg)
+![Research Report](Day-01-Research-Assistant/screenshots/nexus-performance-stats.jpg)
 
 ### Testing Questions : RAG vs Fine-tuning in LLM applications
 
