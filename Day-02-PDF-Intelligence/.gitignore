@@ -1,5 +1,7 @@
-.env
 __pycache__/
+*.py[cod]
 .pytest_cache/
-*.pyc
-data/*.pdf
+pytest-cache-files-*/
+.venv/
+venv/
+.env
