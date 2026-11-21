@@ -1,4 +1,3 @@
-from .pdf_extractor import PDFExtractor
-from .chunker import chunk_text
+from .chunker import TextChunker
 
-__all__ = ["extract_pdf_text", "chunk_text"]
+__all__ = ["TextChunker"]
