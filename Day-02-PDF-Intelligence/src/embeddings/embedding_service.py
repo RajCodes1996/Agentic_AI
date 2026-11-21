@@ -1,28 +1,76 @@
-"""Embedding adapter with a dependency-free lexical fallback."""
-import math
-import re
-from collections import Counter
+
+from sentence_transformers import SentenceTransformer
+import numpy as np
+
 
 class EmbeddingService:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        self.model_name = model_name
-        self._model = None
-        try:
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(model_name)
-        except Exception:
-            pass
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        if self._model is not None:
-            return self._model.encode(texts, normalize_embeddings=True).tolist()
-        return [self._lexical_vector(text) for text in texts]
+    def __init__(
+        self,
+        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        model=None
+    ):
 
-    @staticmethod
-    def _lexical_vector(text: str, dimensions: int = 256) -> list[float]:
-        counts = Counter(re.findall(r"\w+", text.lower()))
-        values = [0.0] * dimensions
-        for word, count in counts.items():
-            values[hash(word) % dimensions] += count
-        norm = math.sqrt(sum(value * value for value in values)) or 1.0
-        return [value / norm for value in values]
+        """
+        Initialize the embedding model.
+
+        An optional model argument allows us to inject
+        a mock model during automated testing.
+        """
+
+        if model is not None:
+            self.model = model
+        else:
+            self.model = SentenceTransformer(model_name)
+
+    def generate_embeddings(
+        self,
+        texts: list[str]
+    ) -> np.ndarray:
+
+        """
+        Convert multiple text passages into embeddings.
+        """
+
+        if not texts:
+            return np.empty((0, 384), dtype=np.float32)
+
+        if any(
+            not isinstance(text, str) or not text.strip()
+            for text in texts
+        ):
+            raise ValueError(
+                "All input texts must be non-empty strings."
+            )
+
+        embeddings = self.model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False
+        )
+
+        return np.asarray(embeddings, dtype=np.float32)
+
+    def generate_query_embedding(
+        self,
+        query: str
+    ) -> np.ndarray:
+
+        """
+        Convert a user question into an embedding.
+        """
+
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError(
+                "Query cannot be empty."
+            )
+
+        embedding = self.model.encode(
+            query,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False
+        )
+
+        return np.asarray(embedding, dtype=np.float32)
