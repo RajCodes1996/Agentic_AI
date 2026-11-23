@@ -1,20 +1,20 @@
-
 from pathlib import Path
 import pymupdf
 
 
 class PDFExtractor:
 
-    def extract_text(self, pdf_path: str) -> list[dict]:
-
+    def extract_text(self, pdf_path: str | Path) -> list[dict[str, int | str]]:
         """
-        Extract text from a PDF while preserving page numbers.
+        Extract text from a PDF while preserving 1-based page numbers.
         """
+        if pdf_path is None:
+            raise ValueError("PDF path cannot be None.")
 
         pdf_file = Path(pdf_path)
 
-        # Validate file existence
-        if not pdf_file.exists():
+        # Validate file existence and ensure it is a regular file
+        if not pdf_file.exists() or not pdf_file.is_file():
             raise FileNotFoundError(
                 f"PDF file not found: {pdf_path}"
             )
@@ -25,26 +25,25 @@ class PDFExtractor:
                 "Only PDF files are supported."
             )
 
-        extracted_pages = []
+        extracted_pages: list[dict[str, int | str]] = []
 
-        # Open PDF document
-        with fitz.open(pdf_file) as document:
+        try:
+            with pymupdf.open(pdf_file) as document:
+                for page_index, page in enumerate(document):
+                    text = page.get_text("text").strip()
 
-            # Process every page
-            for page_index, page in enumerate(document):
+                    # Ignore empty pages
+                    if not text:
+                        continue
 
-                # Extract text
-                text = page.get_text("text").strip()
-
-                # Ignore empty pages
-                if not text:
-                    continue
-
-                # Store page information
-                extracted_pages.append({
-                    "page_number": page_index + 1,
-                    "text": text
-                })
+                    extracted_pages.append({
+                        "page_number": page_index + 1,
+                        "text": text,
+                    })
+        except pymupdf.FileDataError as exc:
+            raise ValueError(
+                f"Invalid or corrupted PDF file: {pdf_path}"
+            ) from exc
 
         if not extracted_pages:
             raise ValueError(
