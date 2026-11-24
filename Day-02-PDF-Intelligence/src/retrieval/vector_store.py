@@ -115,7 +115,7 @@ class VectorStore:
             ids=ids,
             embeddings=vectors,
             documents=documents,
-            metadatas=metadatas
+            metadatas=metadatas,
         )
 
         return len(chunks)

@@ -13,14 +13,23 @@ class RAGPipeline:
         self.retriever = Retriever(self.embeddings, self.store)
 
     def _embed_documents(self, texts: list[str]) -> list[list[float]]:
-        if hasattr(self.embeddings, "generate_document_embeddings"):
+        if hasattr(self.embeddings, "generate_embeddings"):
+            embeddings = self.embeddings.generate_embeddings(texts)
+        elif hasattr(self.embeddings, "generate_document_embeddings"):
             embeddings = self.embeddings.generate_document_embeddings(texts)
         elif hasattr(self.embeddings, "embed"):
             embeddings = self.embeddings.embed(texts)
         else:
-            raise AttributeError("Embedding service must implement 'embed' or 'generate_document_embeddings'.")
+            raise AttributeError(
+                "Embedding service must implement "
+                "'generate_embeddings', 'generate_document_embeddings', "
+                "or 'embed'."
+            )
 
-        return [emb.tolist() if hasattr(emb, "tolist") else list(emb) for emb in embeddings]
+        return [
+            emb.tolist() if hasattr(emb, "tolist") else list(emb)
+            for emb in embeddings
+        ]
 
     def _embed_query(self, query: str) -> list[float]:
         if hasattr(self.embeddings, "generate_query_embedding"):
