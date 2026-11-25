@@ -4,6 +4,20 @@ class Retriever:
         self.embedding_service = embedding_service
         self.vector_store = vector_store
 
+    def _generate_query_embedding(self, query: str):
+        """Support both current and alternative embedding interfaces."""
+
+        if hasattr(self.embedding_service, "generate_query_embedding"):
+            return self.embedding_service.generate_query_embedding(query)
+
+        if hasattr(self.embedding_service, "embed"):
+            return self.embedding_service.embed([query])[0]
+
+        raise AttributeError(
+            "Embedding service must implement "
+            "'generate_query_embedding' or 'embed'."
+        )
+
     def search(self, query: str, top_k: int = 3) -> list[dict]:
         """Retrieve the most relevant document chunks for a query."""
 
@@ -23,12 +37,15 @@ class Retriever:
         if total_chunks == 0:
             return []
 
-        query_embedding = self.embedding_service.generate_query_embedding(
-            query.strip()
-        )
+        query_embedding = self._generate_query_embedding(query.strip())
+
+        if hasattr(query_embedding, "tolist"):
+            query_embedding = query_embedding.tolist()
+        else:
+            query_embedding = list(query_embedding)
 
         results = collection.query(
-            query_embeddings=[query_embedding.tolist()],
+            query_embeddings=[query_embedding],
             n_results=min(top_k, total_chunks),
             include=["documents", "metadatas", "distances"]
         )

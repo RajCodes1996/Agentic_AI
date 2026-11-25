@@ -125,3 +125,35 @@ def test_top_k_is_forwarded(sample_chunks):
     service.answer("What is Python?", top_k=2)
 
     assert retriever.last_top_k == 2
+
+def test_unsupported_llm_answer_is_not_returned():
+    chunks = [
+        {
+            "id": "chunk_0",
+            "chunk_id": 0,
+            "page_number": 1,
+            "text": (
+                "Transparency diligence means being honest "
+                "about AI's role in your work."
+            ),
+            "distance": 0.12
+        }
+    ]
+
+    retriever = FakeRetriever(chunks)
+
+    provider = FakeLLMProvider(
+        response=(
+            "Transparency means following ethical guidelines "
+            "and checking AI systems for bias."
+        )
+    )
+
+    service = RAGAnswerService(retriever, provider)
+
+    result = service.answer(
+        "What does transparency diligence mean?"
+    )
+
+    assert "ethical guidelines" not in result["answer"]
+    assert "checking AI systems for bias" not in result["answer"]
