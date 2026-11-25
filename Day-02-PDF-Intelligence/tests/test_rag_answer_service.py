@@ -55,7 +55,7 @@ def test_generate_grounded_answer(sample_chunks):
     result = service.answer("What is Python?")
 
     assert result["answer"] == (
-        "Python is a programming language."
+        "Python is a programming language. [Page 1] [Page 2]"
     )
 
     assert result["question"] == "What is Python?"
