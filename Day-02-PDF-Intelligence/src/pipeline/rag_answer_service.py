@@ -36,6 +36,10 @@ Follow these rules without exception:
    information to answer this."
 """
 
+    OVERVIEW_SYSTEM_INSTRUCTION = """
+You are a careful document analyst. Explain documents naturally while staying faithful to their actual contents. Never invent facts or citations.
+"""
+
     MAX_DISTANCE = 0.70
 
     INSUFFICIENT_INFO = (
@@ -147,7 +151,157 @@ Follow these rules without exception:
         ]
         return " ".join(selected[:3])
 
-    def answer(self, question: str, top_k: int = 3) -> dict:
+    def _is_document_overview_question(self, question: str) -> bool:
+        """Identify broad questions about the entire uploaded document."""
+        normalized = re.sub(r"[^a-z0-9\s]", " ", question.lower())
+        normalized = " ".join(normalized.split())
+        overview_phrases = (
+            "what is in the pdf",
+            "what is in this pdf",
+            "what is in the document",
+            "what does this document contain",
+            "what is this document about",
+            "summarize this document",
+            "summarize the document",
+            "summarize this pdf",
+            "give me a summary",
+            "provide an overview",
+            "give me an overview",
+            "tell me about this document",
+            "explain the document",
+            "what are the 4ds",
+            "what is the 4ds",
+            "explain each of the 4ds",
+            "explain the 4ds",
+            "describe the 4ds",
+            "list the 4ds",
+            "tell me about the 4ds"
+        )
+        return any(
+            phrase in normalized
+            for phrase in overview_phrases
+        )
+
+    def _answer_document_overview(
+        self,
+        question: str,
+        document_pages: list[dict]
+    ) -> dict:
+        """Generate an overview from the original extracted PDF pages."""
+        if not document_pages:
+            return {
+                "question": question,
+                "answer": self.INSUFFICIENT_INFO,
+                "sources": []
+            }
+
+        # Keep page boundaries so citations remain accurate.
+        context_parts = []
+        sources = []
+        remaining_chars = 12000
+        for idx, page in enumerate(document_pages):
+            page_text = page.get("text", "").strip()
+            if not page_text or remaining_chars <= 0:
+                continue
+            selected_text = page_text[:remaining_chars]
+            page_number = page.get("page_number", idx + 1)
+            context_parts.append(
+                f"[Page {page_number}]\n{selected_text}"
+            )
+            sources.append({
+                "page_number": page_number,
+                "chunk_id": -1,
+                "text": selected_text,
+                "distance": 0.0
+            })
+            remaining_chars -= len(selected_text)
+
+        if not context_parts:
+            return {
+                "question": question,
+                "answer": self.INSUFFICIENT_INFO,
+                "sources": []
+            }
+
+        context = "\n\n".join(context_parts)
+        prompt = f"""You are an expert document analysis assistant.
+Answer the user's question using ONLY the supplied PDF content.
+
+DOCUMENT CONTENT:
+{context}
+
+USER QUESTION:
+{question}
+
+IMPORTANT RULES:
+1. Describe the actual subject and main ideas of the document.
+2. Never invent a document title, author, organization,
+   date, statistic, or other detail.
+3. Only mention a title if it is explicitly present
+   in the supplied document content.
+4. Distinguish explicit document facts from interpretations.
+5. Do not assume information that is merely suggested.
+6. Organize the response into readable paragraphs
+   or bullet points.
+7. Explain the important concepts in natural,
+   conversational language.
+8. Every factual statement must be supported
+   by the supplied content.
+9. Cite the original page numbers using [Page X].
+10. If the document does not establish something,
+    clearly acknowledge that limitation.
+
+Be helpful, clear and natural, but never sacrifice
+accuracy for a more impressive answer."""
+
+        try:
+            answer = self.llm_provider.generate(
+                prompt=prompt,
+                system_instruction=(
+                    "You are a careful document analyst. "
+                    "Explain documents naturally while staying "
+                    "faithful to their actual contents. "
+                    "Never invent facts or citations."
+                )
+            )
+        except TypeError as error:
+            if "system_instruction" not in str(error):
+                raise
+
+            answer = self.llm_provider.generate(prompt)
+
+        answer = str(answer).strip()
+        if not answer:
+            return {
+                "question": question,
+                "answer": self.INSUFFICIENT_INFO,
+                "sources": []
+            }
+
+        # Reject generated overviews containing unsupported terms.
+        if not self._is_answer_supported(answer, sources):
+            answer = (
+                "Here is the information extracted directly "
+                "from your document:\n\n"
+                + context
+            )
+        elif not re.search(r"\[Page\s+\d+\]", answer):
+            allowed_pages = sorted({source["page_number"] for source in sources})
+            citations = " ".join(f"[Page {page}]" for page in allowed_pages)
+            answer = f"{answer} {citations}".strip()
+
+        return {
+            "question": question,
+            "answer": answer,
+            "sources": sources
+        }
+
+    def answer(
+        self,
+        question: str,
+        top_k: int = 3,
+        document_pages: list[dict] | None = None
+    ) -> dict:
         """Retrieve relevant passages and generate a grounded answer."""
 
         if not isinstance(question, str) or not question.strip():
@@ -161,6 +315,16 @@ Follow these rules without exception:
             raise ValueError("top_k must be a positive integer.")
 
         question = question.strip()
+
+        # Handle broad questions using the complete extracted document.
+        if (
+            document_pages
+            and self._is_document_overview_question(question)
+        ):
+            return self._answer_document_overview(
+                question,
+                document_pages
+            )
 
         # Step 1: Retrieve relevant PDF passages.
         chunks = self.retriever.search(
@@ -205,7 +369,9 @@ Follow these rules without exception:
         allowed_pages_text = ", ".join(str(page) for page in allowed_pages)
 
         # Step 4: Build the LLM prompt.
-        prompt = f"""DOCUMENT CONTEXT:
+        prompt = f"""You are an intelligent PDF document assistant.
+
+DOCUMENT CONTEXT:
 {context}
 
 AVAILABLE PAGE NUMBERS:
@@ -214,16 +380,25 @@ AVAILABLE PAGE NUMBERS:
 USER QUESTION:
 {question}
 
-STRICT INSTRUCTIONS:
-1. Answer using ONLY the supplied document context.
-2. Do not use outside knowledge.
-3. Do not invent facts, examples, or explanations.
-4. Only cite page numbers listed under AVAILABLE PAGE NUMBERS.
-5. Never invent or assume a page number.
-6. If the context does not contain the answer, say:
-   "The uploaded document does not provide enough information to answer this."
-7. Keep the answer clear and concise.
-8. Every factual statement must be supported by the document."""
+INSTRUCTIONS:
+
+1. Answer the exact question using the document context.
+2. Write naturally, clearly and conversationally.
+3. If the user asks for a list, identify ALL relevant items.
+4. If the user asks about multiple concepts, address EACH concept.
+5. Never omit an important item just to keep the answer short.
+6. Explain concepts using their definitions in the document.
+7. Organize multi-part answers using numbered lists or bullet points.
+8. Do not repeat the same concept unnecessarily.
+9. Never invent information or use outside knowledge.
+10. Cite the actual page numbers using [Page X].
+11. Only use page numbers from AVAILABLE PAGE NUMBERS.
+12. If the document genuinely lacks the requested information,
+    respond exactly:
+    "The uploaded document does not provide enough information to answer this."
+
+Produce a complete, useful answer rather than a vague summary.
+"""
 
         # Step 5: Generate the answer.
         try:
